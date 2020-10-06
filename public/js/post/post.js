@@ -1,32 +1,74 @@
 class Post {
   constructor() {
-    // TODO inicializar firestore y settings
+    // Inicializar firestore y settings
     this.db = firebase.firestore();
     const settings = { timestampsInSnapshots: true };
-    this.db.settings(settings)
+    this.db.settings(settings);
   }
 
   crearPost(uid, emailUser, titulo, descripcion, imagenLink, videoLink) {
-    return this.db.collection('posts').add({
-      uid: uid,
-      autor:emailUser,
-      titulo:titulo,
-      descripcion:descripcion,
-      imagenLink:imagenLink,
-      videoLink:videoLink,
-      fecha: firebase.firestore.FieldValue.serverTimestamp(),
-    })
-    .then(refDoc => {
-      console.log(`Id del post => ${refDoc.id}`);
-    })
-    .catch(error => {
-      console.error(`Error creando el post ${error}`)
+    return this.db
+      .collection("posts")
+      .add({
+        uid: uid,
+        autor: emailUser,
+        titulo: titulo,
+        descripcion: descripcion,
+        imagenLink: imagenLink,
+        videoLink: videoLink,
+        fecha: firebase.firestore.FieldValue.serverTimestamp(),
+      })
+      .then((refDoc) => {
+        console.log(`Id del post => ${refDoc.id}`);
+      })
+      .catch((error) => {
+        console.error(`Error creando el post ${error}`);
+      });
+  }
+
+  consultarTodosPost() {
+    this.db.collection('posts').onSnapshot(querySnapshot => {
+      $('#posts').empty()
+      if (querySnapshot.empty) {
+        $('#posts').append(this.obtenerTemplatePostVacio)
+      } else {
+        querySnapshot.forEach(post => {
+          let postHtml = this.obtenerPostTemplate(
+            post.data().autor,
+            post.data().titulo,
+            post.data().descripcion,
+            post.data().videoLink,
+            post.data().imagenLink,
+            Utilidad.obtenerFecha(post.data().fecha.toDate()),
+          )
+          $('#posts').append(postHtml)
+        });
+      }
     })
   }
 
-  consultarTodosPost() {}
-
-  consultarPostxUsuario(emailUser) {}
+  consultarPostxUsuario(emailUser) {
+    this.db.collection('posts')
+    .where('autor',"==", emailUser)
+    .onSnapshot(querySnapshot => {
+      $('#posts').empty()
+      if (querySnapshot.empty) {
+        $('#posts').append(this.obtenerTemplatePostVacio)
+      } else {
+        querySnapshot.forEach(post => {
+          let postHtml = this.obtenerPostTemplate(
+            post.data().autor,
+            post.data().titulo,
+            post.data().descripcion,
+            post.data().videoLink,
+            post.data().imagenLink,
+            Utilidad.obtenerFecha(post.data().fecha.toDate()),
+          )
+          $('#posts').append(postHtml)
+        });
+      }
+    })
+  }
 
   obtenerTemplatePostVacio() {
     return `<article class="post">
@@ -111,8 +153,8 @@ class Post {
                     <a class="post-estrellita-vacia" href="*"></a>
                 </div>
                 <div class="post-video">
-                    <iframe type="text/html" width="500" height="385" src='${videoLink}'
-                        frameborder="0"></iframe>
+                    <iframe type="text/html" width="500" height="385" src='${videoLink}' frameborder="0">
+                    </iframe>
                     </figure>
                 </div>
                 <div class="post-videolink">
