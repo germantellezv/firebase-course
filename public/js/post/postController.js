@@ -60,6 +60,5 @@ $(() => {
     const post = new Post()
     post.subirImagenPost(file, user.uid)
 
-    
   })
 })
