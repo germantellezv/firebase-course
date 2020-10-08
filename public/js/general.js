@@ -2,24 +2,68 @@ $(() => {
   $('.tooltipped').tooltip({ delay: 50 })
   $('.modal').modal()
 
-  // TODO: Adicionar el service worker
-
+  
   // Init Firebase nuevamente
   firebase.initializeApp(varConfig);
+  
+  // Adicionar el service worker
+  navigator.serviceWorker.register('notificaciones-sw.js')
+  .then(registro => {
+    console.log('service worker registrado');
+    firebase.messaging().useServiceWorker(registro)
+  })
+  .catch(error => {
+    console.error(`Error al registrar el service worker: ${error}`)
+  })
 
-  // TODO: Registrar LLave publica de messaging
+  const messaging = firebase.messaging()
 
-  // TODO: Solicitar permisos para las notificaciones
+  // Registrar LLave publica de messaging
+  messaging.usePublicVapidKey('BGrmTWIR0nziDPJ0c7wtkCBrZ9f_qRZAPlnpeikE_r8fdOBOk1CAEXFIXqLF98X8YOiHY9mHZAReHsSgn_WCnH0')
+
+
+  // Solicitar permisos para las notificaciones
+  messaging.requestPermission()
+  .then( () => {
+    console.log('permiso obtenido');
+    return messaging.getToken()
+  })
+  .then(token => {
+    const db = firebase.firestore()
+    db.settings({timestampsInSnapshots: true})
+    db.collection('tokens').doc(token).set({'token':token})
+  })
+  .catch(error => {
+    console.log(`Error al insertar el token en la base de datos ${error}`);
+  })
+  
+  // Obtener el token cuando se refresca
+  messaging.onTokenRefresh( () => {
+    messaging.getToken()
+    .then(token => {
+      const db = firebase.firestore()
+      db.settings({timestampsInSnapshots: true})
+      db.collection('tokens').doc(token).set({'token':token})
+    })
+    .catch(error => {
+      console.log(`Error al insertar el token en la base de datos ${error}`);
+    })
+
+  })
+
 
   // TODO: Recibir las notificaciones cuando el usuario esta foreground
+  messaging.onMessage(payload => {
+    Materialize.toast(`Ya tenemos un nuevo post. Revisalo, se llama ${payload.data.titulo}`, 6000)
+  })
 
   // TODO: Recibir las notificaciones cuando el usuario esta background
 
-  // TODO: Listening real time
+  // Listening real time
   const post = new Post()
   post.consultarTodosPost()
 
-  // TODO: Firebase observador del cambio de estado
+  // Firebase observador del cambio de estado
   firebase.auth().onAuthStateChanged(user => {
     if (user) {
       $('#btnInicioSesion').text('Salir')
@@ -34,7 +78,7 @@ $(() => {
     }
   })
 
-  // TODO: Evento boton inicio sesion
+  // Evento boton inicio sesion
   $('#btnInicioSesion').click(() => {
     const user = firebase.auth().currentUser
     if (user) {
@@ -62,7 +106,7 @@ $(() => {
       Materialize.toast(`SignOut correcto`, 4000)
     })
     .catch(error => {
-      // console.error(error.message)
+      console.error(error.message)
       Materialize.toast(`Error al realizar el SignOut. Error: ${error}`, 4000)
     })
   })
